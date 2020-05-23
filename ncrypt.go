@@ -27,13 +27,19 @@ func (c *Context) Encrypt(target interface{}) error {
 	return nil
 }
 
-type Metadata struct {
+type AEADMetadata struct {
+	Nonce   []byte
+	AuthTag []byte
+}
+
+type StreamMetadata struct {
+	IV []byte
 }
 
 type Seal struct {
-	Metadata
+	AEADMetadata
 }
 
-type Crypt struct {
-	Metadata
+type Encrypt struct {
+	StreamMetadata
 }
