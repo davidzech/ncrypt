@@ -75,9 +75,11 @@ func (c *Context) Encrypt(target interface{}) error {
 					return err
 				}
 				stream := cipher.NewCTR(block, iv)
-				if err := encryptStruct(stream, target); err != nil {
+				if err := encryptStruct(stream, s); err != nil {
 					return fmt.Errorf("failed to encrypt struct: %w", err)
 				}
+				enc.IV = iv
+				enc.Encrypted = true
 			}
 		}
 		if !s.FieldByName("Seal").IsZero() {
