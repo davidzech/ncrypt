@@ -5,6 +5,5 @@ import (
 	"reflect"
 )
 
-func encryptStruct(c cipher.Stream, s reflect.Value) error {
-	return nil
+func encryptStruct(c cipher.Stream, s reflect.Value) {
 }

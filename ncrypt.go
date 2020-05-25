@@ -40,7 +40,7 @@ func (c *Context) Decrypt(target interface{}) error {
 func makeIV(len int) (iv []byte, err error) {
 	if err := func() error {
 		iv = make([]byte, len)
-		read, err := rand.Reader.Read(iv)
+		read, err := rand.Read(iv)
 		if err != nil {
 			return err
 		}
@@ -52,6 +52,19 @@ func makeIV(len int) (iv []byte, err error) {
 		return nil, fmt.Errorf("failed to generate IV: %v", err)
 	}
 	return
+}
+
+func initAESCTR(metadata *Encrypt, key []byte) (cipher.Stream, error) {
+	block, err := aes.NewCipher(key) // do key
+	if err != nil {
+		return nil, fmt.Errorf("failed to initialize block cipher: %v", err)
+	}
+	iv, err := makeIV(block.BlockSize())
+	if err != nil {
+		return nil, err
+	}
+	stream := cipher.NewCTR(block, iv)
+	return stream, nil
 }
 
 func (c *Context) Encrypt(target interface{}) error {
@@ -66,19 +79,12 @@ func (c *Context) Encrypt(target interface{}) error {
 				if enc.Encrypted {
 					return errors.New("already encrypted")
 				}
-				block, err := aes.NewCipher(c.key()) // do key
+				stream, err := initAESCTR(&enc, c.key())
 				if err != nil {
-					return fmt.Errorf("failed to initialize block cipher: %v", err)
+					enc.reset()
+					return fmt.Errorf("failed to init cipher: %w", err)
 				}
-				iv, err := makeIV(block.BlockSize())
-				if err != nil {
-					return err
-				}
-				stream := cipher.NewCTR(block, iv)
-				if err := encryptStruct(stream, s); err != nil {
-					return fmt.Errorf("failed to encrypt struct: %w", err)
-				}
-				enc.IV = iv
+				encryptStruct(stream, s)
 				enc.Encrypted = true
 			}
 		}
@@ -106,4 +112,8 @@ type Seal struct {
 
 type Encrypt struct {
 	StreamMetadata
+}
+
+func (e *Encrypt) reset() {
+	*e = Encrypt{}
 }
