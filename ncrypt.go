@@ -67,29 +67,46 @@ func initAESCTR(metadata *Encrypt, key []byte) (cipher.Stream, error) {
 	return stream, nil
 }
 
+func isStructPointer(value reflect.Value) bool {
+	return value.Kind() == reflect.Ptr && value.Elem().Kind() == reflect.Struct
+}
+
+func findEmbeddedEncrypt(val reflect.Value) (e *Encrypt, ok bool) {
+	field := val.FieldByName("Encrypt")
+
+	if !field.IsValid() ||
+		field.Kind() != reflect.Struct ||
+		field.Type() != reflect.TypeOf(Encrypt{}) {
+		return nil, false
+	}
+	return field.Addr().Interface().(*Encrypt), true
+
+}
+
+func findEmbeddedSeal(structVal reflect.Value) (s *Seal, ok bool) {
+	panic("not yet implemented")
+}
+
 func (c *Context) Encrypt(target interface{}) error {
 	v := reflect.ValueOf(target)
-	if v.Kind() == reflect.Ptr && v.Elem().Kind() == reflect.Struct {
+	if isStructPointer(v) {
 		s := v.Elem()
 		// TODO: make sure the embedded fields are mutually exclusive
-		if f := s.FieldByName("Encrypt"); !f.IsZero() {
+		if enc, ok := findEmbeddedEncrypt(s); ok {
 			// found field, check if its the right type
-			if f.Type() == reflect.TypeOf(Encrypt{}) {
-				enc := f.Interface().(Encrypt)
-				if enc.Encrypted {
-					return errors.New("already encrypted")
-				}
-				stream, err := initAESCTR(&enc, c.key())
-				if err != nil {
-					enc.reset()
-					return fmt.Errorf("failed to init cipher: %w", err)
-				}
-				encryptStruct(stream, s)
-				enc.Encrypted = true
+			if enc.Encrypted {
+				return errors.New("already encrypted")
 			}
+			stream, err := initAESCTR(enc, c.key())
+			if err != nil {
+				enc.reset()
+				return fmt.Errorf("failed to init cipher: %w", err)
+			}
+			encryptStruct(stream, s)
+			enc.Encrypted = true
 		}
-		if !s.FieldByName("Seal").IsZero() {
-			return errors.New("not implemented yet")
+		if _, ok := findEmbeddedSeal(s); ok {
+			panic("not yet implemented")
 		}
 	}
 	return errors.New("value is not a pointer")
@@ -107,10 +124,12 @@ type StreamMetadata struct {
 }
 
 type Seal struct {
+	anchor int
 	AEADMetadata
 }
 
 type Encrypt struct {
+	anchor int
 	StreamMetadata
 }
 
