@@ -17,7 +17,7 @@ func TestFindEmbeddedEncrypt(t *testing.T) {
 		{
 			name:       "embedded value",
 			shouldFail: false,
-			val: struct {
+			val: &struct {
 				Encrypt
 			}{},
 		},
@@ -29,6 +29,7 @@ func TestFindEmbeddedEncrypt(t *testing.T) {
 				assert.NotNil(t, e)
 				assert.True(t, ok)
 			} else {
+
 				assert.Nil(t, e)
 				assert.False(t, ok)
 			}

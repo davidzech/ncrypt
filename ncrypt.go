@@ -72,7 +72,7 @@ func isStructPointer(value reflect.Value) bool {
 }
 
 func findEmbeddedEncrypt(val reflect.Value) (e *Encrypt, ok bool) {
-	field := val.FieldByName("Encrypt")
+	field := val.Elem().FieldByName("Encrypt")
 
 	if !field.IsValid() ||
 		field.Kind() != reflect.Struct ||
@@ -109,7 +109,7 @@ func (c *Context) Encrypt(target interface{}) error {
 			panic("not yet implemented")
 		}
 	}
-	return errors.New("value is not a pointer")
+	return errors.New("value is not a struct pointer")
 }
 
 type AEADMetadata struct {
@@ -124,12 +124,10 @@ type StreamMetadata struct {
 }
 
 type Seal struct {
-	anchor int
 	AEADMetadata
 }
 
 type Encrypt struct {
-	anchor int
 	StreamMetadata
 }
 
