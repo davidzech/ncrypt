@@ -112,23 +112,15 @@ func (c *Context) Encrypt(target interface{}) error {
 	return errors.New("value is not a struct pointer")
 }
 
-type AEADMetadata struct {
+type Seal struct {
 	Encrypted bool
 	Nonce     []byte
 	AuthTag   []byte
 }
 
-type StreamMetadata struct {
+type Encrypt struct {
 	Encrypted bool
 	IV        []byte
-}
-
-type Seal struct {
-	AEADMetadata
-}
-
-type Encrypt struct {
-	StreamMetadata
 }
 
 func (e *Encrypt) reset() {
