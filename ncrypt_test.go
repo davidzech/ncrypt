@@ -38,5 +38,30 @@ func TestFindEmbeddedEncrypt(t *testing.T) {
 }
 
 func TestFindEmbeddedSeal(t *testing.T) {
-
+	type tc struct {
+		name       string
+		shouldFail bool
+		val        interface{}
+	}
+	tcs := []tc{
+		{
+			name:       "embedded value",
+			shouldFail: false,
+			val: &struct {
+				Seal
+			}{},
+		},
+	}
+	for _, c := range tcs {
+		t.Run(c.name, func(t *testing.T) {
+			e, ok := findEmbeddedSeal(reflect.ValueOf(c.val))
+			if !c.shouldFail {
+				assert.NotNil(t, e)
+				assert.True(t, ok)
+			} else {
+				assert.Nil(t, e)
+				assert.False(t, ok)
+			}
+		})
+	}
 }

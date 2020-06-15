@@ -83,8 +83,14 @@ func findEmbeddedEncrypt(val reflect.Value) (e *Encrypt, ok bool) {
 
 }
 
-func findEmbeddedSeal(structVal reflect.Value) (s *Seal, ok bool) {
-	panic("not yet implemented")
+func findEmbeddedSeal(val reflect.Value) (s *Seal, ok bool) {
+	field := val.Elem().FieldByName("Seal")
+	if !field.IsValid() ||
+		field.Kind() != reflect.Struct ||
+		field.Type() != reflect.TypeOf(Seal{}) {
+		return nil, false
+	}
+	return field.Addr().Interface().(*Seal), true
 }
 
 func (c *Context) Encrypt(target interface{}) error {
