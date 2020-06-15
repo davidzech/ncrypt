@@ -73,14 +73,12 @@ func isStructPointer(value reflect.Value) bool {
 
 func findEmbeddedEncrypt(val reflect.Value) (e *Encrypt, ok bool) {
 	field := val.Elem().FieldByName("Encrypt")
-
 	if !field.IsValid() ||
 		field.Kind() != reflect.Struct ||
 		field.Type() != reflect.TypeOf(Encrypt{}) {
 		return nil, false
 	}
 	return field.Addr().Interface().(*Encrypt), true
-
 }
 
 func findEmbeddedSeal(val reflect.Value) (s *Seal, ok bool) {
@@ -99,10 +97,15 @@ func (c *Context) Encrypt(target interface{}) error {
 		s := v.Elem()
 		// TODO: make sure the embedded fields are mutually exclusive
 		if enc, ok := findEmbeddedEncrypt(s); ok {
-			// found field, check if its the right type
+			// make sure we are exclusive
+			if _, ok := findEmbeddedSeal(s); ok {
+				return errors.New("ncrypt.Seal and ncrypt.Encrypt are mutually exclusive")
+			}
+
 			if enc.Encrypted {
 				return errors.New("already encrypted")
 			}
+
 			stream, err := initAESCTR(enc, c.key())
 			if err != nil {
 				enc.reset()
