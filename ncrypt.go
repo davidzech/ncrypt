@@ -92,8 +92,7 @@ func findEmbeddedSeal(val reflect.Value) (s *Seal, ok bool) {
 }
 
 func (c *Context) Encrypt(target interface{}) error {
-	v := reflect.ValueOf(target)
-	if isStructPointer(v) {
+	v := reflect.ValueOf(target)  
 		s := v.Elem()
 		// TODO: make sure the embedded fields are mutually exclusive
 		if enc, ok := findEmbeddedEncrypt(s); ok {
