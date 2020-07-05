@@ -6,6 +6,7 @@ import (
 	"crypto/rand"
 	"errors"
 	"fmt"
+	"io"
 	"reflect"
 )
 
@@ -25,22 +26,30 @@ const (
 )
 
 type Context struct {
-	Key  []byte
-	Mode Mode
+	Key    []byte
+	Mode   Mode
+	Random io.Reader
 }
 
 func (c *Context) key() []byte {
 	return c.Key
 }
 
-func (c *Context) Decrypt(target interface{}) error {
-	return nil
+func (c *Context) random() io.Reader {
+	if c.Random == nil {
+		c.Random = rand.Reader
+	}
+	return c.Random
 }
 
-func makeIV(len int) (iv []byte, err error) {
+func (c *Context) Decrypt(target interface{}) error {
+	panic("not implemented")
+}
+
+func makeIV(random io.Reader, len int) (iv []byte, err error) {
 	if err := func() error {
 		iv = make([]byte, len)
-		read, err := rand.Read(iv)
+		read, err := random.Read(iv)
 		if err != nil {
 			return err
 		}
@@ -54,12 +63,12 @@ func makeIV(len int) (iv []byte, err error) {
 	return
 }
 
-func initAESCTR(metadata *Encrypt, key []byte) (cipher.Stream, error) {
+func initAESCTR(random io.Reader, metadata *Encrypt, key []byte) (cipher.Stream, error) {
 	block, err := aes.NewCipher(key) // do key
 	if err != nil {
 		return nil, fmt.Errorf("failed to initialize block cipher: %v", err)
 	}
-	iv, err := makeIV(block.BlockSize())
+	iv, err := makeIV(random, block.BlockSize())
 	if err != nil {
 		return nil, err
 	}
@@ -92,43 +101,42 @@ func findEmbeddedSeal(val reflect.Value) (s *Seal, ok bool) {
 }
 
 func (c *Context) Encrypt(target interface{}) error {
-	v := reflect.ValueOf(target)  
-		s := v.Elem()
-		// TODO: make sure the embedded fields are mutually exclusive
-		if enc, ok := findEmbeddedEncrypt(s); ok {
-			// make sure we are exclusive
-			if _, ok := findEmbeddedSeal(s); ok {
-				return errors.New("ncrypt.Seal and ncrypt.Encrypt are mutually exclusive")
-			}
-
-			if enc.Encrypted {
-				return errors.New("already encrypted")
-			}
-
-			stream, err := initAESCTR(enc, c.key())
-			if err != nil {
-				enc.reset()
-				return fmt.Errorf("failed to init cipher: %w", err)
-			}
-			encryptStruct(stream, s)
-			enc.Encrypted = true
-		}
+	v := reflect.ValueOf(target)
+	s := v.Elem()
+	// TODO: make sure the embedded fields are mutually exclusive
+	if enc, ok := findEmbeddedEncrypt(s); ok {
+		// make sure we are exclusive
 		if _, ok := findEmbeddedSeal(s); ok {
-			panic("not yet implemented")
+			return errors.New("ncrypt.Seal and ncrypt.Encrypt are mutually exclusive")
 		}
+
+		if enc.Encrypted {
+			return errors.New("already encrypted")
+		}
+
+		stream, err := initAESCTR(c.random(), enc, c.key())
+		if err != nil {
+			enc.reset()
+			return fmt.Errorf("failed to init cipher: %w", err)
+		}
+		encryptStruct(stream, s)
+		enc.Encrypted = true
+	}
+	if _, ok := findEmbeddedSeal(s); ok {
+		panic("not yet implemented")
 	}
 	return errors.New("value is not a struct pointer")
 }
 
 type Seal struct {
-	Encrypted bool
 	Nonce     []byte
 	AuthTag   []byte
+	Encrypted bool
 }
 
 type Encrypt struct {
-	Encrypted bool
 	IV        []byte
+	Encrypted bool
 }
 
 func (e *Encrypt) reset() {
