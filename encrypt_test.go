@@ -32,6 +32,8 @@ func TestEncryptStruct(t *testing.T) {
 		Float32    float32
 		Complex64  complex64
 		Complex128 complex128
+		Slice      []byte
+		Array      [8]byte
 	}
 
 	s := primitives{

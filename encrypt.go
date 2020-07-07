@@ -6,8 +6,11 @@ import (
 	"unsafe"
 )
 
+func encryptT(c cipher.Stream, v reflect.Value) {
+
+}
+
 func encryptStruct(c cipher.Stream, s reflect.Value) {
-	// we know s is a pointer to a struct, therefore all values can be set
 	for i := 0; i < s.NumField(); i++ {
 		field := s.Field(i)
 		switch field.Kind() {
@@ -61,14 +64,16 @@ func encryptStruct(c cipher.Stream, s reflect.Value) {
 			c.XORKeyStream(bytes, bytes)
 			field.SetString(string(bytes))
 		case reflect.Slice:
-
+			innerType
 		}
 
 	}
 }
 
-func encryptInt(c cipher.Stream, v *int) {
-
+func encryptInt(c cipher.Stream, v interface{}) {
+	pv := v.(*int)
+	bytes := (*[unsafe.Sizeof(int(0))]byte)(unsafe.Pointer(pv))[:]
+	c.XORKeyStream(bytes, bytes)
 }
 
 func decryptStruct(c cipher.Stream, s reflect.Value) {
