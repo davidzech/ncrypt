@@ -119,7 +119,7 @@ func (c *Context) Encrypt(target interface{}) error {
 			enc.reset()
 			return fmt.Errorf("failed to init cipher: %w", err)
 		}
-		encryptStruct(stream, s)
+		encryptStruct(stream, target)
 		enc.Encrypted = true
 	}
 	if _, ok := findEmbeddedSeal(s); ok {

@@ -4,7 +4,6 @@ import (
 	"crypto/aes"
 	"crypto/cipher"
 	"math"
-	"reflect"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
@@ -34,6 +33,10 @@ func TestEncryptStruct(t *testing.T) {
 		Complex128 complex128
 		Slice      []byte
 		Array      [8]byte
+
+		Struct struct {
+			Int int
+		}
 	}
 
 	s := primitives{
@@ -52,13 +55,19 @@ func TestEncryptStruct(t *testing.T) {
 		Float32:    math.MaxFloat32,
 		Complex64:  complex(float32(1), float32(1)),
 		Complex128: complex(float64(1), float64(1)),
+		Slice:      []byte{1, 2, 3, 4},
+		Array:      [8]byte{1, 2, 3, 4, 5, 6, 7},
+		Struct: struct{ Int int }{
+			42,
+		},
 	}
 	notASecret := []byte{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}
 	b, _ := aes.NewCipher(notASecret)
 	stream := cipher.NewCTR(b, notASecret)
-	encryptStruct(stream, reflect.ValueOf(&s).Elem())
+	encryptStruct(stream, &s)
+	assert.Zero(t, s.Encrypt) // Encrypt shouldn't have been touched
 	stream = cipher.NewCTR(b, notASecret)
-	decryptStruct(stream, reflect.ValueOf(&s).Elem())
+	encryptStruct(stream, &s)
 	assert.Equal(t, s.Int, -42)
 	assert.Equal(t, s.String, "hello")
 }
